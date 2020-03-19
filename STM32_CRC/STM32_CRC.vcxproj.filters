@@ -19,4 +19,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="STM32_CRC.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="STM32_ADC.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>

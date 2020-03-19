@@ -1,39 +1,50 @@
-﻿// STM32_CRC.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
-//
-
+﻿/*
+ *         _____          ___           ___           ___           ___                       ___           ___
+ *        /  /::\        /  /\         /  /\         /  /\         /__/\          ___        /  /\         /__/|
+ *       /  /:/\:\      /  /::\       /  /:/_       /  /::\        \  \:\        /  /\      /  /:/_       |  |:|
+ *      /  /:/  \:\    /  /:/\:\     /  /:/ /\     /  /:/\:\        \  \:\      /  /:/     /  /:/ /\      |  |:|
+ *     /__/:/ \__\:|  /  /:/  \:\   /  /:/ /::\   /  /:/  \:\   _____\__\:\    /  /:/     /  /:/ /:/_   __|  |:|
+ *     \  \:\ /  /:/ /__/:/ \__\:\ /__/:/ /:/\:\ /__/:/ \__\:\ /__/::::::::\  /  /::\    /__/:/ /:/ /\ /__/\_|:|____
+ *      \  \:\  /:/  \  \:\ /  /:/ \  \:\/:/~/:/ \  \:\ /  /:/ \  \:\~~\~~\/ /__/:/\:\   \  \:\/:/ /:/ \  \:\/:::::/
+ *       \  \:\/:/    \  \:\  /:/   \  \::/ /:/   \  \:\  /:/   \  \:\  ~~~  \__\/  \:\   \  \::/ /:/   \  \::/~~~~
+ *        \  \::/      \  \:\/:/     \__\/ /:/     \  \:\/:/     \  \:\           \  \:\   \  \:\/:/     \  \:\
+ *         \__\/        \  \::/        /__/:/       \  \::/       \  \:\           \__\/    \  \::/       \  \:\
+ *                       \__\/         \__\/         \__\/         \__\/                     \__\/         \__\/
+ *
+ *
+ * @ 名称: STM32_CRC.cpp
+ * @ 描述:
+ * @ 作者: Tomy
+ * @ 日期: 2020年3月17日
+ * @ 版本: V1.0
+ * @ 历史: V1.0 2020年3月17日 Summary
+ *
+ * Copyright (c) 2020 DosonTek Electronics Co., Ltd. All rights reserved.
+ */
 #include <iostream>
+#include "STM32_CRC.h"
 
-/* 不同编译器 4 字节对齐适配 */
-#if defined (__MINGW32__) /* MINGW32 Compiler */
-
-#ifndef __ALIGN_END
-#define __ALIGN_END    __attribute__ ((aligned (4)))
-#endif
-
-#ifndef __ALIGN_BEGIN  
-#define __ALIGN_BEGIN
-#endif
-
-#elif defined (_MSC_VER) /* MSVC Compiler */
-
-#ifndef __ALIGN_END
-#define __ALIGN_END
-#endif
-
-#ifndef __ALIGN_BEGIN      
-#define __ALIGN_BEGIN   __declspec(align(4))
-#endif
-
-#endif
-
-#define USB_DATA_OUT_BUFFER_SIZE    (8U)        /* BUFFER_SIZE 必须为 4 的整数倍 */
-#define USB_DATA_IN_BUFFER_SIZE     (64U)       /* BUFFER_SIZE 必须为 4 的整数倍 */
-#define CVT_TO_WORD_LENGTH(A)       (A / 4U)
 
 /* 强制 4 字节对齐 */
 /* DataOut 和 DataIn 是相对于 USB Host 而言的 */
 __ALIGN_BEGIN uint8_t USB_DataOutBuffer[USB_DATA_OUT_BUFFER_SIZE] __ALIGN_END = {0}; /* DataOut 为 Host 向 Device 发出命令 */
 __ALIGN_BEGIN uint8_t USB_DataInBuffer[USB_DATA_IN_BUFFER_SIZE] __ALIGN_END = {0}; /* DataIn 为 Device 向 Host 汇报数据 */
+
+uint8_t* const pUSB_DataOutBuffer = USB_DataOutBuffer;
+uint8_t* const pUSB_DataInBuffer = USB_DataInBuffer;
+
+USB_DataOutPkt_t* const pUSB_DataOutPkt = (USB_DataOutPkt_t*)USB_DataOutBuffer;
+USB_DataInPkt_t* const pUSB_DataInPkt = (USB_DataInPkt_t*)USB_DataInBuffer;
+
+/* 用于调试中查看结构体所占内存空间大小、是否对齐 */
+//USB_DataOutPkt_t USB_DataOutPkt = { 0xFF };
+//USB_DataInPkt_t USB_DataInPkt = { 0xFF };
+//uint8_t StructSize_1 = sizeof(USB_DataOutPkt_t);
+//uint8_t StructSize_2 = sizeof(USB_DataOutPkt);
+//uint8_t StructSize_3 = sizeof(USB_DataInPkt_t);
+//uint8_t StructSize_4 = sizeof(USB_DataInPkt);
+
+ADC_SampleVal_t* const pADC_SampleVal = (ADC_SampleVal_t*)pUSB_DataInPkt->DataPayload_t.ADC_SampleValArr;
 
 uint32_t STM32_CRC_Calculate(uint32_t* pBuffer, uint32_t BufferLength)
 {
@@ -69,12 +80,24 @@ uint32_t STM32_CRC_Calculate(uint32_t* pBuffer, uint32_t BufferLength)
 
 int main()
 {
-    uint32_t CRCVal = 0;
+    uint32_t CRC_32 = NULL;
 
+    /* STEP 1: USB 接收，赋值给 pUSB_DataInBuffer 所指向的缓冲区 */
+    /* TODO Something... */
+
+    /* STEP 2: 接收后首先对 CRC 进行校验 */
     /* 注意传入的缓冲将以 uint32_t * 类型的指针进行访问，访问步长为 4 字节，故第二个形参指的是有多少个 uint32_t 类型的参数，而非多少个字节 */
-    CRCVal = STM32_CRC_Calculate((uint32_t *)USB_DataOutBuffer, CVT_TO_WORD_LENGTH(USB_DATA_OUT_BUFFER_SIZE));
-    printf("%s\r\n", USB_DataOutBuffer);
-    printf("0x%08X\r\n", CRCVal);
+    CRC_32 = STM32_CRC_Calculate((uint32_t *)pUSB_DataInPkt, CVT_TO_WORD_LENGTH(USB_DATA_IN_BUFFER_SIZE - sizeof(uint32_t)));
+    if (CRC_32 == pUSB_DataInPkt->CRC_32)
+    {
+        /* CRC 校验通过 */
+        printf("%s\r\n", pUSB_DataInBuffer);
+        printf("0x%08X\r\n", CRC_32);
+    }
+    else
+    {
+        /* CRC 校验错误 */
+    }    
 }
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单

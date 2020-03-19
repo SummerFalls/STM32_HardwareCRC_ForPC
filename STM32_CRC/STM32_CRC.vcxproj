@@ -149,6 +149,10 @@
   <ItemGroup>
     <ClCompile Include="STM32_CRC.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="STM32_ADC.h" />
+    <ClInclude Include="STM32_CRC.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
